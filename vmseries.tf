@@ -41,6 +41,27 @@ resource "aws_network_interface" "trust" {
 }
 
 # ---------------------------------------------------------------------
+# SSH Key Pair — Required to SSH in and set the admin password
+# PAN-OS 12.x PAYG images have no default web UI password.
+# You must SSH in with the key pair and set it via CLI.
+# ---------------------------------------------------------------------
+resource "tls_private_key" "vmseries" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "vmseries" {
+  key_name   = "${var.project_name}-vmseries-key"
+  public_key = tls_private_key.vmseries.public_key_openssh
+}
+
+resource "local_file" "private_key" {
+  content         = tls_private_key.vmseries.private_key_pem
+  filename        = "${path.module}/vmseries-key.pem"
+  file_permission = "0600"
+}
+
+# ---------------------------------------------------------------------
 # Elastic IP — Attached to management ENI for remote access
 # ---------------------------------------------------------------------
 resource "aws_eip" "mgmt" {
@@ -62,6 +83,13 @@ resource "aws_eip_association" "mgmt" {
 resource "aws_instance" "vmseries" {
   ami           = data.aws_ami.vmseries.id
   instance_type = var.instance_type
+  key_name      = aws_key_pair.vmseries.key_name
+
+  # Allow IMDSv1 so PAN-OS can read the SSH key from instance metadata
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "optional"
+  }
 
   # Management interface is the primary ENI (device_index = 0)
   network_interface {
