@@ -1,0 +1,11 @@
+# terraform.tfvars.example — Copy to terraform.tfvars and fill in your values
+# cp terraform.tfvars.example terraform.tfvars
+
+aws_region        = "us-west-2"
+availability_zone = "us-west-2a"
+project_name      = "cloudbats-pan"
+instance_type     = "m5.xlarge"
+
+# IMPORTANT: Replace with your actual public IP/32 for security
+# Find your IP: curl -s https://checkip.amazonaws.com
+allowed_mgmt_cidrs = ["YOUR_IP/32"]
